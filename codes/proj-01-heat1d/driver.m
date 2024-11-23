@@ -1,17 +1,17 @@
-clear all; clc; % clean the memory and screen
 
+function [d_temp]=driver(pp,n_el,n_int)
 % Define the external source or force and boundary data
 f = @(x) -20*x.^3; % f(x) = x
 g = 1.0;           % u    = g  at x = 1
 h = 0.0;           % -u,x = h  at x = 0
 
 % Setup the mesh
-pp   = 2;              % polynomial degree
+% pp   = 2;              % polynomial degree
 n_en = pp + 1;         % number of element or local nodes
-n_el = 4;              % number of elements
+% n_el = 4;              % number of elements
 n_np = n_el * pp + 1;  % number of nodal points
 n_eq = n_np - 1;       % number of equations
-n_int = 10;
+% n_int = 10;
 
 hh = 1.0 / (n_np - 1); % space between two adjacent nodes
 x_coor = 0 : hh : 1;   % nodal coordinates for equally spaced nodes
@@ -91,7 +91,7 @@ disp = [d_temp; g];
 
 
 
-
+end
 
 
 
