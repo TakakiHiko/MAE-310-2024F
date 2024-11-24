@@ -1,9 +1,9 @@
 
-function [d_temp]=driver(pp,n_el,n_int)
+function [d_temp]=driver(pp,n_el,n_int,ux,u)
 % Define the external source or force and boundary data
 f = @(x) -20*x.^3; % f(x) = x
-g = 1.0;           % u    = g  at x = 1
-h = 0.0;           % -u,x = h  at x = 0
+g = u ;          % u    = g  at x = 1
+h = -ux;           % -u,x = h  at x = 0
 
 % Setup the mesh
 % pp   = 2;              % polynomial degree
