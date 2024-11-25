@@ -12,7 +12,10 @@ for i=2:2:16
 pp=1;
 n_el=i;
 n_int=10;
-uh= driver(pp,n_el,n_int,ux1,u0);
+da=driver(pp,n_el,n_int,ux1,u0);
+for j=1:length(da)
+
+end
 h=1/n_el/pp;%Determine the interval between each adjacent point
 x=0:h:1-h;
 ur=u(x);
@@ -22,15 +25,11 @@ for j=1:i-1
     x2=x(1,j+1);
     y1=uh(j,1);
     y2=uh(j+1,1);
-    p=(y2-y1)/(x2-x1);
-erro(i/2,1)=erro(i/2,1)+(cha(x1,x2,11)-2*p*(cha(x1,x2,7)-x1*cha(x1,x2,6))+y1*cha(x1,x2,6)+p^2....
-*(cha(x1,x2,3)-x1*cha(x1,x2,2)*2+cha(x1,x2,1)*x1^2)+y1^2*cha(x1,x2,1)-2*p*y1*(cha(x1,x2,2)-x1*cha(x1,x2,1)))/calu;
+    p=(y1-y2)/(x1-x2);
+    Gaussorder=2;
+    [cord,w]=Gauss(2,1/16,2/16);
+erro(i/2,1)=erro(i/2,1)+(w(1,1)*(cord(1,1)^5-(y1-p*x1)-p*cord(1,1))^2+w(2,1)*(cord(2,1)^5-(y1-p*x1)-p*cord(2,1))^2)/calu;
 end
-end
-
-
-function [result]= cha(a,b,t)
-result=(b.^t-a.^t)./t;
 end
 
 
