@@ -28,8 +28,13 @@ for j=1:i-1
     p=(y1-y2)/(x1-x2);
     Gaussorder=2;
     [cord,w]=Gauss(2,1/16,2/16);
-erro(i/2,1)=erro(i/2,1)+(w(1,1)*(cord(1,1)^5-(y1-p*x1)-p*cord(1,1))^2+w(2,1)*(cord(2,1)^5-(y1-p*x1)-p*cord(2,1))^2)/calu;
+erro(i/2,1)=erro(i/2,1)+(w(1,1)*(cord(1,1)^5-PolyShape(1,1,cord(1,1),0))^2+w(2,1)*(cord(2,1)^5-(y1-p*x1)-p*cord(2,1))^2)/calu;
 end
+end
+
+function [result]=linear_projection(a,b,x1,x2,x)
+%线性坐标变换，由（a，b）的x，投影到（x1，x2）的result。
+result=(x1*b-x1*x+x2*x-x2*a)/(b-a);
 end
 
 
