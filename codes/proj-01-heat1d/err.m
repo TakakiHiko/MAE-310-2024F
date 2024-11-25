@@ -24,7 +24,7 @@ for j=1:i-1
     y2=uh(j+1,1);
     p=(y2-y1)/(x2-x1);
 erro(i/2,1)=erro(i/2,1)+(cha(x1,x2,11)-2*p*(cha(x1,x2,7)-x1*cha(x1,x2,6))+y1*cha(x1,x2,6)+p^2....
-*(cha(x1,x2,3)-x1*cha(x1,x2,2)+cha(x1,x2,1)*x1^2)+y1^2*cha(x1,x2,1)-2*p*y1*(cha(x1,x2,2)-x1*cha(x1,x2,1)))/calu;
+*(cha(x1,x2,3)-x1*cha(x1,x2,2)*2+cha(x1,x2,1)*x1^2)+y1^2*cha(x1,x2,1)-2*p*y1*(cha(x1,x2,2)-x1*cha(x1,x2,1)))/calu;
 end
 end
 
