@@ -1,5 +1,4 @@
-clear;
-clc;
+
 hold on;
 ux1=0;
 u0=1;
@@ -13,89 +12,141 @@ uxx=@(x) 20*x^3;%对x的二次导数
 nelmax=16;%giving the biggest number of elements
 n_node=3;%number of nodes in each elements
 n_int=15;%number of point for gaussquadrature
-for n_el=2:1:32% giving the mesh size
-hh = 1 / n_el / n_node;
-    x_coor = 0 : hh : 1;
-
- %generate Id
-     n_point=n_el*n_node+1;
-     ID = 1 : n_point;
-    ID(end) = 0;
-    n_eq = n_point- 1;
-
-    %generate IEN
-    IEN = zeros(4, n_el);
-     for ee = 1 : n_el
-        IEN(1,ee) = 3*ee - 2;
-        IEN(2,ee) = 3*ee - 1;
-        IEN(3,ee) = 3*ee;
-        IEN(4,ee) = 3*ee + 1;
-     end
-
-    %GAUSS Quadrature
+degree=2;%number of polyshape oreder
+pp=degree;
+mistake=zeros(2,nelmax/2-1);
 [x,w]=Gauss(n_int,-1,1);
+for n_el=2:2:nelmax
+%     f = @(x) -20*x.^3; % f(x) is the source
+% g = 1.0;           % u    = g  at x = 1
+% h = 0.0;           % -u,x = h  at x = 0
 
-%generate K and F
-K=zeros(n_eq,n_eq);
-F=zeros(n_eq,1);
-   for ee = 1 : n_el
+% Setup the mesh
+n_en = pp + 1;         % number of element or local nodes
+n_np = n_el * pp + 1;  % number of nodal points
+n_eq = n_np - 1;       % number of equations
 
-        k_e = zeros(4,4); 
-        f_e = zeros(4,1);
 
-        x_ele = zeros(4,1);
-        for aa = 1 : 4
-            x_ele(aa) = x_coor(IEN(aa,ee)); % A = IEN(a,e)
+hh = 1.0 / (n_np - 1); % space between two adjacent nodes
+x_coor = 0 : hh : 1;   % nodal coordinates for equally spaced nodes
+
+IEN = zeros(n_el, n_en);
+
+for ee = 1 : n_el
+  for flag1 = 1 : n_en
+    IEN(ee, flag1) = (ee - 1) * pp + flag1;
+  end
+end
+
+% Setup the ID array for the problem
+ID = 1 : n_np;
+ID(end) = 0;
+
+% Setup the quadrature rule
+[xi, weight] = Gauss(n_int, -1, 1);
+
+% allocate the stiffness matrix
+K = spalloc(n_eq, n_eq, (2*pp+1)*n_eq);
+F = zeros(n_eq, 1);
+
+% Assembly of the stiffness matrix and load vector
+for ee = 1 : n_el
+  k_ele = zeros(n_en, n_en); % allocate a zero element stiffness matrix
+  f_ele = zeros(n_en, 1);    % allocate a zero element load vector
+
+  x_ele = x_coor(IEN(ee,:)); % x_ele(aa) = x_coor(A) with A = IEN(aa, ee)
+
+  % quadrature loop
+  for qua = 1 : n_int    
+    dx_dxi = 0.0;
+    x_l = 0.0;
+    for flag1 = 1 : n_en
+      x_l    = x_l    + x_ele(flag1) * PolyShape(pp, flag1, xi(qua), 0);
+      dx_dxi = dx_dxi + x_ele(flag1) * PolyShape(pp, flag1, xi(qua), 1);
+    end
+    dxi_dx = 1.0 / dx_dxi;
+
+    for flag1 = 1 : n_en
+      f_ele(flag1) = f_ele(flag1) + weight(qua) * PolyShape(pp, flag1, xi(qua), 0) * u(x_l) * dx_dxi;
+      for bb = 1 : n_en
+        k_ele(flag1, bb) = k_ele(flag1, bb) + weight(qua) * PolyShape(pp, flag1, xi(qua), 1) * PolyShape(pp, bb, xi(qua), 1) * dxi_dx;
+      end
+    end
+  end
+ 
+  % Assembly of the matrix and vector based on the ID or LM data
+  for flag1 = 1 : n_en
+    P = ID(IEN(ee,flag1));
+    if(P > 0)
+      F(P) = F(P) + f_ele(flag1);
+      for bb = 1 : n_en
+        Q = ID(IEN(ee,bb));
+        if(Q > 0)
+          K(P, Q) = K(P, Q) + k_ele(flag1, bb);
+        else
+          F(P) = F(P) - k_ele(flag1, bb) * u0; % handles the Dirichlet boundary data
         end
+      end
+    end
+  end
+end
 
-    for l = 1 : n_int
-        dx_dxi = 0.0;
-        x_l = 0.0;
-        for aa = 1 : 4
-            dx_dxi = dx_dxi + x_ele(aa) * PolyShape(aa, xi(l), 1);
-            x_l = x_l + x_ele(aa) * PolyShape(aa, xi(l), 0);
-        end
-        dxi_dx = 1.0 / dx_dxi;
+% ee = 1 F = NA(0)xh
+F(ID(IEN(1,1))) = F(ID(IEN(1,1))) +ux1;
 
-        for aa = 1 : 4
-            for bb = 1 : 4
-                k_e(aa,bb) = k_e(aa,bb) + weight(l) * PolyShape(aa, xi(l), 1) * PolyShape(bb, xi(l), 1) * dxi_dx;
+% Solve Kd = F equation
+d_temp = K \ F;
+
+uh=d_temp;
+d=[uh;u0];
+
+err1=0;
+err2=0;
+
+for flag_el=1:n_el
+    x_ele=zeros(n_en,1);
+    for flag=1:n_en
+        x_ele(flag)=x_coor(IEN(flag_el,flag));
+    end
+
+    L1=0;
+    H2=0;
+
+   
+        for l = 1 : n_int
+            u_h = 0.0;
+            uhx = 0.0;
+            x_l = 0.0;
+            changer = 0.0;
+            
+            for flag1 = 1 : n_en
+                changer = changer + x_ele(flag1) * PolyShape(degree,flag1, xi(l), 1);
             end
-        end
-
-        for aa = 1 : 4
-            f_e(aa) = f_e(aa) + weight(l) * PolyShape(aa, xi(l), 0) * f(x_l) * dx_dxi;
-        end
-
-    end
-
-    % Now we need to put element k and f into global K and F
-    for aa = 1 : 4
-        AA = IEN(aa,ee);
-        PP = ID(AA);
-        if PP > 0
-            F(PP) = F(PP) + f_e(aa);
-            for bb = 1 : 4
-                BB = IEN(bb,ee);
-                QQ = ID(BB);
-                if QQ > 0
-                    K(PP,QQ) = K(PP,QQ) + k_e(aa,bb);
-                else
-                    F(PP) = F(PP) - k_e(aa,bb) * g;
-                end
+            
+            for flag1 = 1 : n_en
+               u_h = u_h +u(x_ele(flag1)) * PolyShape(degree,flag1, xi(l), 0); 
+               
+                uhx = uhx + u(x_ele(flag1)) * PolyShape(degree,flag1, xi(l), 1) / changer;
+      
+                x_l = x_l + x_ele(flag1) * PolyShape(degree,flag1, xi(l), 0);
+                 
             end
-        end
-    end
+            ureal=u(x_l);
+            uxreal=ux(x_l);
+            L1 = L1 + w(l) * (u_h - ureal)^2 * changer;
+             H2 = H2 + w(l) * (uhx - uxreal)^2 * changer;
 
-        if ee == 1
-        F(ID(IEN(1,ee))) = F(ID(IEN(1,ee))) + h;
         end
-    end
-% Now we have K and F
-% Solve Kd = F
-uh = K \ F;
-d = [uh; g];
-%tips: all the code depend on course material,below part calculates the
-%error
+        err1=err1+L1;
+        err2=err2+H2;
 
 end
+f_L1=(err1)^0.5/calu;
+f_H2=(err2)^0.5/calux;
+mistake(1,(n_el/2))=f_L1;
+mistake(2,(n_el/2))=f_H2;
+end
+mistake=log(mistake);
+mesh_number=4:4:n_eq;
+mesh_number=log(mesh_number);
+ plot(mesh_number,mistake(1,:),"-*");
