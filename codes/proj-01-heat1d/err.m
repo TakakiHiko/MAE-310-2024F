@@ -149,4 +149,17 @@ end
 mistake=log(mistake);
 mesh_number=4:4:n_eq;
 mesh_number=log(mesh_number);
- plot(mesh_number,mistake(1,:),"-*");
+figure;
+subplot(2,1,1);
+plot(mesh_number,mistake(1,:),"-*");
+ xlabel('log(mesh_size)');
+    ylabel('log(Error u(x))');
+    title('Plot of Error  vs. mesh size');
+
+ subplot(2,1,2);
+plot(mesh_number,mistake(2,:),"-o");
+ xlabel('log(mesh_size)');
+    ylabel('log(Error ux(x))');
+    title('Plot of Error  vs. mesh size');
+
+
