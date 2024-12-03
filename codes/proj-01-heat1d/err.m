@@ -1,5 +1,5 @@
 
-hold on;
+
 ux1=0;
 u0=1;
 u=@(x) x.^5;%exact function
@@ -11,7 +11,7 @@ uxx=@(x) 20*x^3;%对x的二次导数
 
 nelmax=16;%giving the biggest number of elements
 n_node=3;%number of nodes in each elements
-n_int=15;%number of point for gaussquadrature
+n_int=16;%number of point for gaussquadrature
 degree=2;%number of polyshape oreder
 pp=degree;
 mistake=zeros(2,nelmax/2-1);
@@ -161,5 +161,12 @@ plot(mesh_number,mistake(2,:),"-o");
  xlabel('log(mesh_size)');
     ylabel('log(Error ux(x))');
     title('Plot of Error  vs. mesh size');
+k1=polyfit(mesh_number,mistake(1,:),1)
+k2=polyfit(mesh_number,mistake(2,:),1)
+%展示线性相关系数
+r1=corr(mesh_number',mistake(1,:)')
+r2=corr(mesh_number',mistake(2,:)')
+%可见对于u（x）计算相对误差之时，其误差随着mesh—size的减小而呈3阶逼近。而ux（x）2阶。
+%而且其线性拟合的关系较好。可以认为分析准确
 
 
