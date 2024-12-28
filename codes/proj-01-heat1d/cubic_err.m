@@ -9,7 +9,7 @@ uxx=@(x) 20*x^3;%对x的二次导数
 
 nelmax=16;%giving the biggest number of elements
 n_node=3;%number of nodes in each elements
-n_int=15;%number of point for gaussquadrature
+n_int=6;%number of point for gaussquadrature
 degree=3;%number of polyshape oreder
 pp=degree;
 mistake=zeros(2,nelmax/2-1);
@@ -159,3 +159,4 @@ plot(mesh_number,mistake(2,:),"-o");
  xlabel('log(mesh_size)');
     ylabel('log(Error ux(x))');
     title('Plot of Error  vs. mesh size');
+    hold on;

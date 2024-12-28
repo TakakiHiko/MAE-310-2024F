@@ -53,9 +53,9 @@ for ee = 1 : n_el
     dxi_dx = 1.0 / dx_dxi;
 
     for aa = 1 : n_en
-      f_ele(aa) = f_ele(aa) + weight(qua) * PolyShape(pp, aa, xi(qua), 0) * f(x_l) * dx_dxi;
+      f_ele(aa) = f_ele(aa) + w(qua) * PolyShape(pp, aa, xi(qua), 0) * f(x_l) * dx_dxi;
       for bb = 1 : n_en
-        k_ele(aa, bb) = k_ele(aa, bb) + weight(qua) * PolyShape(pp, aa, xi(qua), 1) * PolyShape(pp, bb, xi(qua), 1) * dxi_dx;
+        k_ele(aa, bb) = k_ele(aa, bb) + w(qua) * PolyShape(pp, aa, xi(qua), 1) * PolyShape(pp, bb, xi(qua), 1) * dxi_dx;
       end
     end
   end
