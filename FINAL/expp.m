@@ -1,0 +1,1 @@
+[a,b]=readmsh('examplee.msh');
