@@ -1,4 +1,4 @@
-filename = 'mesh.txt'; % 替换为实际文件名
+filename = 'mesh.txt';
 fileID = fopen(filename, 'r');
 
 % 初始化存储
@@ -19,6 +19,7 @@ while ~feof(fileID)
     elseif contains(line, '$Elements')
         % 读取单元部分
         numElements = str2double(fgetl(fileID));
+
         elements = cell(numElements, 1);
         for i = 1:numElements
             data = sscanf(fgetl(fileID), '%f')';
@@ -28,9 +29,16 @@ while ~feof(fileID)
 end
 
 fclose(fileID);
+IEN=[];
+lineflag=1;
+for i=1:numElements
+vec=cell2mat(elements(i,1));
+if vec(1,2)==3
+tips=vec(1,3);
+nodes=vec(1,4+tips:length(vec));
+IEN(lineflag,1)=lineflag;
+IEN(2:1+length(nodes))= nodes;
+lineflag=lineflag+1;
+end
+end
 
-% 输出结果
-disp('Nodes:');
-disp(nodes);
-disp('Elements:');
-disp(elements);
