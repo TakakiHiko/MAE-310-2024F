@@ -37,7 +37,7 @@ if vec(1,2)==3
 tips=vec(1,3);
 nodes=vec(1,4+tips:length(vec));
 IEN(lineflag,1)=lineflag;
-IEN(2:1+length(nodes))= nodes;
+IEN(lineflag,2:1+length(nodes))= nodes;
 lineflag=lineflag+1;
 end
 end
