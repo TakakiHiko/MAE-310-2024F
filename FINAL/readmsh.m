@@ -3,6 +3,7 @@ filename = 'mesh.txt';
 fileID = fopen(filename, 'r');
 po=0.3;%泊松比
 ym=1e9;%杨氏模量
+f=1e4;%边界条件10kpa
 % 初始化存储
 nodes = [];
 elements = [];
@@ -32,7 +33,7 @@ while ~feof(fileID)
             elements{i} = data; % 保存整个单元定义
         end
   
-            end
+    end
 end
 %坐标识别边界且记录其编号
  for i=1:numNodes
@@ -66,8 +67,36 @@ lineflag=lineflag+1;
 end
 end
 IEN=IEN(1:length(IEN),2:5);%generate IEN matrix
+%找出边界单元编号
+force_element=zeros(length(rightid)-1,3);
 
 numElements=lineflag-1;
+ks=1;
+for i=1:numElements
+ar=IEN(i,:);
+   flag=0;
+ for j=1:length(rightid)
+   if ismember(rightid(1,j),ar)
+       flag=flag+1;
+   end
+ end
+ if flag==2
+force_element(ks,1)=i;
+flag=0;
+ks=ks+1;
+ elseif flag==1
+     flag=0;
+ end
+end
+for i=1:length(force_element)
+    k=2;
+for j=1:4
+if ismember(IEN(force_element(i,1),j),rightid)
+force_element(i,k)=IEN(force_element(i,1),j);
+k=k+1;
+end
+end
+end
 freedom=2;%节点自由度
 
 ID=generate_ID_from_IEN(IEN,freedom);
@@ -77,6 +106,38 @@ fclose(fileID);
 %local stiffness matrix
 sizee=size(IEN);
 Kee1=zeros(8,8,lineflag-1);
+%Local force matrix
+F=zeros(numNodes*freedom,1); 
+elemntflag=1;
+%无体积力，仅有表面力
+F_local=zeros(8,numElements);
+Gausspoint=6;
+[xi_gauss,w_gauss]=Gauss(Gausspoint,-1,1);
+example=0;
+for i=1:length(force_element)
+f_local=zeros(4,1);
+load=[f;0];
+elementindex=force_element(i,1);
+coo1=[nodes(force_element(i,2),2),nodes(force_element(i,2),3)];
+coo2=[nodes(force_element(i,3),2),nodes(force_element(i,3),3)];
+L=norm(coo1-coo2);
+Jaco=L/2;
+for j = 1:length(xi_gauss)
+    % 当前高斯点局部坐标
+    xi = xi_gauss(j);
+    
+    % 形状函数 (线性单元)
+    N = [0.5 * (1 - xi), 0.5 * (1 + xi)];
+    
+    % 将形状函数扩展到自由度 (二维问题)
+    N_ext = kron(N, eye(2)); % 生成 [N1 0 N2 0; 0 N1 0 N2]
+    
+    % 累加表面力贡献
+    f_local = f_local + N_ext' * load * w_gauss(j) * Jaco;
+end
+F_local(1:4,elementindex)=f_local;
+end
+
 
 for i=1:lineflag-1
 coo=zeros(4,2);
@@ -86,7 +147,7 @@ coo(j,1)=nodes(index,2);
 coo(j,2)=nodes(index,3);
 end
 Kee1(:,:,i)=quad4_stiffness(ym,po,coo);
-   
+
 end
 k_global=zeros(numNodes*freedom,numNodes*freedom);
 for e=1:numElements
@@ -98,12 +159,26 @@ freedommap=zeros(1,numel(elementnodes)*freedom);
  end
 
  Ke=Kee1(:,:,e);
+ Fe=F_local(:,e);
  for i=1:length(freedommap)
     for j=1:length(freedommap)
      k_global(freedommap(i), freedommap(j)) = k_global(freedommap(i), freedommap(j)) + Ke(i, j);
     end
+    F(freedommap(i),1)=F(freedommap(i),1)+Fe(i,1);
  end
 end
+%有对称性可得，对于左侧存在x位移位移为0，下侧y位移为0
+%将对应的自由度以及刚度矩阵调0
+
+
+p1=leftid.*2-1;
+p2=lowerid.*2-1;
+p=[p1 p2];
+k_global(p, :) = [];
+k_global(:, p) = [];
+F(p,:)=[];
+
+
 function K = quad4_stiffness(E, nu, coords)
     % 输入参数:
     % E: 弹性模量
