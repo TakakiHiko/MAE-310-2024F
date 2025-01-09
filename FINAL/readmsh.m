@@ -1,3 +1,4 @@
+
 filename = 'mesh.txt';
 fileID = fopen(filename, 'r');
 po=0.3;%泊松比
@@ -5,7 +6,11 @@ ym=1e9;%杨氏模量
 % 初始化存储
 nodes = [];
 elements = [];
-
+elementnodes=4;%rectangle elements
+upperid=[];
+leftid=[];
+rightid=[];
+lowerid=[];%准备储存边界节点编号
 % 逐行读取文件
 while ~feof(fileID)
     line = fgetl(fileID);
@@ -26,9 +31,27 @@ while ~feof(fileID)
             data = sscanf(fgetl(fileID), '%f')';
             elements{i} = data; % 保存整个单元定义
         end
-    end
-
+  
+            end
 end
+%坐标识别边界且记录其编号
+ for i=1:numNodes
+ cood=nodes(i,:);
+  if cood(1,2)==-1
+   lowerid=[lowerid,i];
+  end
+ if cood(1,2)==1
+   upperid=[upperid,i];
+ end
+ if cood(1,3)==1
+  rightid=[rightid,i];
+ end
+ if cood(1,3)==-1
+  leftid=[leftid,i];
+  end
+ end
+      
+
 
 IEN=[];
 lineflag=1;
@@ -44,13 +67,108 @@ end
 end
 IEN=IEN(1:length(IEN),2:5);%generate IEN matrix
 
-
+numElements=lineflag-1;
 freedom=2;%节点自由度
 
 ID=generate_ID_from_IEN(IEN,freedom);
 
 fclose(fileID);
 
+%local stiffness matrix
+sizee=size(IEN);
+Kee1=zeros(8,8,lineflag-1);
 
+for i=1:lineflag-1
+coo=zeros(4,2);
+for j=1:4
+    index=IEN(i,j);
+coo(j,1)=nodes(index,2);
+coo(j,2)=nodes(index,3);
+end
+Kee1(:,:,i)=quad4_stiffness(ym,po,coo);
+   
+end
+k_global=zeros(numNodes*freedom,numNodes*freedom);
+for e=1:numElements
+elementnodes=IEN(e,:);
+freedommap=zeros(1,numel(elementnodes)*freedom);
+ for i = 1:numel(elementnodes)
+        freedommap(2*i-1:2*i) = [(elementnodes(i)-1)*freedom + 1, ...
+                             (elementnodes(i)-1)*freedom + 2];
+ end
 
+ Ke=Kee1(:,:,e);
+ for i=1:length(freedommap)
+    for j=1:length(freedommap)
+     k_global(freedommap(i), freedommap(j)) = k_global(freedommap(i), freedommap(j)) + Ke(i, j);
+    end
+ end
+end
+function K = quad4_stiffness(E, nu, coords)
+    % 输入参数:
+    % E: 弹性模量
+    % nu: 泊松比
+    % coords: 4x2 矩阵，节点坐标 [x1, y1; x2, y2; x3, y3; x4, y4]
+
+    % 构建弹性矩阵 D (平面应力假设)
+    D = (E / (1 - nu^2)) * [1, nu, 0; nu, 1, 0; 0, 0, (1 - nu) / 2];
     
+    % 高斯积分点及权重 
+    Gausspoints=6;
+    [gauss_pts,weights] = Gauss(Gausspoints,-1,1);
+    
+    
+    % 初始化刚度矩阵
+    K = zeros(8, 8);  % 4节点，每个节点2个自由度
+    
+    % 循环计算高斯积分
+    for i = 1:Gausspoints
+        for j = 1:Gausspoints
+            % 当前积分点 (ξ, η)
+            xi = gauss_pts(i);
+            eta = gauss_pts(j);
+            
+            % 计算形函数及其导数
+            [N, dN_dxi] = shape_function_quad4(xi, eta);
+            
+            % Jacobian 矩阵
+            J = dN_dxi * coords;
+            
+            % Jacobian 行列式和逆
+            detJ = det(J);
+            invJ = inv(J);
+            
+            % 计算形函数对 x, y 的导数
+            dN_dxy = invJ * dN_dxi;
+            
+            % 构造应变-位移矩阵 B
+            B = zeros(3, 8);
+            for k = 1:4
+                B(1, 2*k-1) = dN_dxy(1, k);
+                B(2, 2*k) = dN_dxy(2, k);
+                B(3, 2*k-1) = dN_dxy(2, k);
+                B(3, 2*k) = dN_dxy(1, k);
+            end
+            
+            % 高斯点的权重
+            weight = weights(i) * weights(j);
+            
+            % 累积刚度矩阵
+            K = K + B' * D * B * detJ * weight;
+        end
+    end
+end
+
+function [N, dN_dxi] = shape_function_quad4(xi, eta)
+    % 四节点四边形单元形函数及其导数
+    N = 0.25 * [(1 - xi)*(1 - eta);
+                (1 + xi)*(1 - eta);
+                (1 + xi)*(1 + eta);
+                (1 - xi)*(1 + eta)];
+    
+    dN_dxi = 0.25 * [-1 + eta, -1 + xi;
+                      1 - eta, -1 - xi;
+                      1 + eta,  1 + xi;
+                     -1 - eta,  1 - xi]';
+end
+
