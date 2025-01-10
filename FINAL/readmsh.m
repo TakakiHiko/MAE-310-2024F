@@ -170,14 +170,14 @@ end
 %有对称性可得，对于左侧存在x位移位移为0，下侧y位移为0
 %将对应的自由度以及刚度矩阵调0
 
-
-p1=leftid.*2-1;
-p2=lowerid.*2-1;
-p=[p1 p2];
-k_global(p, :) = [];
-k_global(:, p) = [];
-F(p,:)=[];
-
+% 
+% p1=leftid.*2-1;
+% p2=lowerid.*2-1;
+% p=[p1 p2];
+% k_global(p, :) = [];
+% k_global(:, p) = [];
+% F(p,:)=[];
+U=F\k_global;
 
 function K = quad4_stiffness(E, nu, coords)
     % 输入参数:
